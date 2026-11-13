@@ -8,131 +8,272 @@
 <style>
   :root {
     --bg: #15110f; --card: #221b18; --line: #3a2f2a; --text: #f6ece2;
-    --muted: #b7a597; --accent: #ff8a3d; --good: #7bd88f; --bad: #ff6b6b;
+    --muted: #b7a597; --accent: #ff8a3d; --accent-soft: #3b2518; --good: #7bd88f; --bad: #ff6b6b;
   }
   * { box-sizing: border-box; }
   body {
     margin: 0; min-height: 100vh; background: var(--bg); color: var(--text);
     font: 17px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    padding: max(20px, env(safe-area-inset-top)) 18px 40px;
+    padding: max(18px, env(safe-area-inset-top)) 16px 90px;
   }
   main { max-width: 480px; margin: 0 auto; }
-  h1 { font-size: 30px; margin: 4px 0 2px; letter-spacing: -0.5px; }
-  .sub { color: var(--muted); margin: 0 0 22px; }
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 18px; margin-bottom: 16px; }
-  .label { font-size: 13px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--muted); margin-bottom: 8px; }
-  .now { display: flex; gap: 14px; align-items: center; }
+  h1 { font-size: 28px; margin: 4px 0 2px; letter-spacing: -0.5px; }
+  .sub { color: var(--muted); margin: 0 0 18px; font-size: 15px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 16px; margin-bottom: 14px; }
+  .label { font-size: 12px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--muted); margin-bottom: 10px; display: flex; justify-content: space-between; }
+  .row { display: flex; gap: 12px; align-items: center; }
+  .grow { flex: 1; min-width: 0; }
+  .t { font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .s { color: var(--muted); font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .art { flex: none; width: 48px; height: 48px; border-radius: 8px; background: #2c2420 center/cover; }
+  .art.big { width: 84px; height: 84px; border-radius: 12px; box-shadow: 0 6px 24px #0008; }
   .disc {
-    flex: none; width: 54px; height: 54px; border-radius: 50%;
+    flex: none; width: 84px; height: 84px; border-radius: 50%;
     background: radial-gradient(circle, var(--accent) 0 18%, #111 19% 22%, #2b2b2b 23% 100%);
-    box-shadow: inset 0 0 0 2px #000;
   }
-  .disc.spin { animation: spin 3s linear infinite; }
+  .spin { animation: spin 3s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
-  .title { font-weight: 650; font-size: 19px; }
-  .by { color: var(--muted); font-size: 14px; }
+  .now .t { font-size: 20px; white-space: normal; }
   input {
     width: 100%; font: inherit; color: var(--text); background: #120e0c;
-    border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin-bottom: 10px;
+    border: 1px solid var(--line); border-radius: 12px; padding: 13px 14px;
   }
   input:focus { outline: 2px solid var(--accent); border-color: transparent; }
   button {
-    width: 100%; font: inherit; font-weight: 700; color: #1a0f08; background: var(--accent);
-    border: 0; border-radius: 12px; padding: 15px; cursor: pointer;
+    font: inherit; font-weight: 700; border: 0; border-radius: 12px; cursor: pointer;
+    color: #1a0f08; background: var(--accent); padding: 10px 14px;
   }
-  button:disabled { opacity: .6; }
-  .msg { min-height: 22px; margin-top: 10px; font-size: 15px; }
-  .msg.ok { color: var(--good); } .msg.err { color: var(--bad); }
-  ol { margin: 0; padding-left: 22px; }
-  li { padding: 6px 0; border-bottom: 1px solid var(--line); }
-  li:last-child { border-bottom: 0; }
-  li span { color: var(--muted); font-size: 14px; }
-  .empty { color: var(--muted); }
+  button.ghost { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+  button.vote { min-width: 64px; background: var(--accent-soft); color: var(--text); border: 1px solid var(--line); }
+  button.vote.on { background: var(--accent); color: #1a0f08; border-color: var(--accent); }
+  button:disabled { opacity: .45; cursor: default; }
+  .wide { width: 100%; margin-top: 12px; }
+  .list > * { padding: 9px 0; border-bottom: 1px solid var(--line); }
+  .list > *:last-child { border-bottom: 0; }
+  .badge { display: inline-block; font-size: 10px; font-weight: 800; background: var(--muted); color: var(--bg); border-radius: 3px; padding: 0 4px; margin-left: 4px; vertical-align: 2px; }
+  .empty, .hint { color: var(--muted); font-size: 15px; }
+  .me { font-size: 14px; color: var(--muted); margin-top: 10px; }
+  .me a { color: var(--accent); }
+  .typed { color: var(--accent); background: none; padding: 10px 0; font-weight: 600; text-align: left; width: 100%; }
   .offline { color: var(--bad); font-size: 14px; display: none; margin-bottom: 12px; }
+  #toast {
+    position: fixed; left: 50%; bottom: max(20px, env(safe-area-inset-bottom)); transform: translate(-50%, 120px);
+    background: var(--text); color: var(--bg); padding: 12px 18px; border-radius: 14px; font-weight: 600;
+    max-width: calc(100% - 32px); transition: transform .25s; box-shadow: 0 6px 24px #000a;
+  }
+  #toast.show { transform: translate(-50%, 0); }
+  #toast.err { background: var(--bad); color: #fff; }
 </style>
 </head>
 <body>
 <main>
   <h1>🎵 Group Jukebox</h1>
-  <p class="sub">Add a song and it'll play on the speaker.</p>
+  <p class="sub">Pick a song – it plays on the speaker. Vote for what plays next.</p>
 
   <div class="offline" id="offline">Can't reach the jukebox – are you on the same Wi-Fi?</div>
 
-  <section class="card">
-    <div class="label">Now playing</div>
-    <div class="now">
-      <div class="disc" id="disc"></div>
-      <div>
-        <div class="title" id="nowTitle">…</div>
-        <div class="by" id="nowBy"></div>
+  <section class="card now">
+    <div class="label"><span>Now playing</span><span id="guests"></span></div>
+    <div class="row">
+      <div id="nowArt" class="disc"></div>
+      <div class="grow">
+        <div class="t" id="nowTitle">…</div>
+        <div class="s" id="nowBy"></div>
       </div>
+    </div>
+    <button id="skip" class="ghost wide" hidden>⏭ Vote to skip</button>
+  </section>
+
+  <section class="card">
+    <div class="label"><span>Request a song</span></div>
+    <div id="nameStep">
+      <input id="name" placeholder="First, your name" maxlength="20" autocomplete="given-name">
+      <button id="saveName" class="wide">Let's go</button>
+    </div>
+    <div id="searchStep" hidden>
+      <input id="q" type="search" placeholder="Search songs or artists" maxlength="100" autocomplete="off" enterkeyhint="search">
+      <div id="results" class="list"></div>
+      <div class="me">Requesting as <b id="meName"></b> · <a href="#" id="changeName">change</a></div>
     </div>
   </section>
 
   <section class="card">
-    <div class="label">Request a song</div>
-    <form id="form" autocomplete="off">
-      <input id="name" name="name" placeholder="Your name" maxlength="20" required>
-      <input id="q" name="q" placeholder="Song and artist, e.g. Hey Ya Outkast" maxlength="100" required>
-      <button id="go" type="submit">Add to queue</button>
-      <div class="msg" id="msg" role="status"></div>
-    </form>
-  </section>
-
-  <section class="card">
-    <div class="label">Up next</div>
-    <div id="queue" class="empty">Nothing queued yet</div>
+    <div class="label"><span>Up next</span><span>👍 = play sooner</span></div>
+    <div id="queue" class="list"><div class="empty">Nothing queued yet – be the first!</div></div>
   </section>
 </main>
+<div id="toast" role="status"></div>
 
 <script>
   const $ = (id) => document.getElementById(id);
-  const esc = (s) => String(s).replace(/[&<>"']/g, (c) =>
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const COUNTRY = "GB"; // song search storefront
 
-  // Remember the guest's name between visits (storage may be unavailable).
-  try { $("name").value = localStorage.getItem("jukeboxName") || ""; } catch (e) {}
+  // ---- guest identity (kept between visits where storage works) ----
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+  };
+  let cid = store.get("jukeboxCid");
+  if (!cid) {
+    cid = Array.from({ length: 24 }, () => "0123456789abcdef"[Math.floor(Math.random() * 16)]).join("");
+    store.set("jukeboxCid", cid);
+  }
+  let name = store.get("jukeboxName") || "";
+
+  function showStep() {
+    $("nameStep").hidden = !!name;
+    $("searchStep").hidden = !name;
+    $("meName").textContent = name;
+  }
+  $("saveName").onclick = () => {
+    const n = $("name").value.trim();
+    if (!n) { $("name").focus(); return; }
+    name = n; store.set("jukeboxName", n); showStep(); $("q").focus();
+  };
+  $("name").addEventListener("keydown", (e) => { if (e.key === "Enter") $("saveName").click(); });
+  $("changeName").onclick = (e) => { e.preventDefault(); $("name").value = name; name = ""; showStep(); $("name").focus(); };
+  showStep();
+
+  // ---- talking to the jukebox ----
+  let toastTimer;
+  function toast(msg, ok = true) {
+    const t = $("toast");
+    t.textContent = msg; t.className = "show" + (ok ? "" : " err");
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => (t.className = ""), 2800);
+  }
+
+  async function post(path, data) {
+    try {
+      const r = await fetch(path, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ cid, ...data }).toString(),
+      });
+      const res = await r.json();
+      toast(res.message, res.ok);
+      refresh();
+      return res;
+    } catch (e) {
+      toast("Couldn't reach the jukebox.", false);
+      return { ok: false };
+    }
+  }
+
+  const art = (url, big) => url
+    ? `<div class="art${big ? " big" : ""}" style="background-image:url('${esc(url)}')"></div>`
+    : `<div class="art${big ? " big" : ""}"></div>`;
 
   async function refresh() {
     try {
-      const r = await fetch("/api/state", { cache: "no-store" });
+      const r = await fetch("/api/state?cid=" + cid, { cache: "no-store" });
       const s = await r.json();
       $("offline").style.display = "none";
+
       $("nowTitle").textContent = s.nowPlaying || "Waiting for the first request";
       $("nowBy").textContent = s.requestedBy ? "requested by " + s.requestedBy : "";
-      $("disc").classList.toggle("spin", !!s.playing);
-      $("queue").className = s.upNext.length ? "" : "empty";
-      $("queue").innerHTML = s.upNext.length
-        ? "<ol>" + s.upNext.map((x) => `<li>${esc(x.query)} <span>· ${esc(x.by)}</span></li>`).join("") + "</ol>"
-        : "Nothing queued yet";
+      const na = $("nowArt");
+      if (s.nowArtwork) { na.className = "art big"; na.style.backgroundImage = `url('${s.nowArtwork}')`; }
+      else { na.className = "disc" + (s.playing ? " spin" : ""); na.style.backgroundImage = ""; }
+      $("guests").textContent = s.guests > 1 ? `👥 ${s.guests} here` : "";
+
+      const skip = $("skip");
+      skip.hidden = !s.canVoteSkip;
+      skip.disabled = s.iVotedSkip;
+      skip.textContent = s.iVotedSkip
+        ? `⏭ You voted to skip (${s.skipVotes}/${s.skipNeeded})`
+        : `⏭ Vote to skip${s.skipVotes ? ` (${s.skipVotes}/${s.skipNeeded})` : ""}`;
+
+      $("queue").innerHTML = s.upNext.length ? s.upNext.map((x) => `
+        <div class="row">
+          ${art(x.artwork)}
+          <div class="grow">
+            <div class="t">${esc(x.title)}</div>
+            <div class="s">${x.artist ? esc(x.artist) + " · " : ""}${x.mine ? "your pick" : "from " + esc(x.by)}</div>
+          </div>
+          <button class="vote${x.myVote ? " on" : ""}" data-id="${x.id}" ${x.mine ? "disabled" : ""}
+            aria-label="Vote for ${esc(x.title)}">👍 ${x.votes}</button>
+        </div>`).join("")
+        : `<div class="empty">Nothing queued yet – be the first!</div>`;
     } catch (e) {
       $("offline").style.display = "block";
     }
   }
 
-  $("form").addEventListener("submit", async (ev) => {
-    ev.preventDefault();
-    const name = $("name").value.trim(), q = $("q").value.trim();
-    if (!name || !q) return;
-    try { localStorage.setItem("jukeboxName", name); } catch (e) {}
-    $("go").disabled = true;
-    const msg = $("msg");
-    try {
-      const r = await fetch("/api/add", {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({ name, q }).toString(),
+  $("queue").addEventListener("click", (e) => {
+    const b = e.target.closest("button.vote");
+    if (b && !b.disabled) post("/api/vote", { id: b.dataset.id });
+  });
+  $("skip").onclick = () => post("/api/skipvote", {});
+
+  // ---- song search (straight from Apple's free iTunes catalogue) ----
+  let searchSeq = 0, debounce, lastResults = [];
+  function itunesSearch(term) {
+    return new Promise((resolve, reject) => {
+      const cb = "itunesCb" + (++searchSeq);
+      const s = document.createElement("script");
+      const timer = setTimeout(() => { cleanup(); reject(new Error("timeout")); }, 8000);
+      function cleanup() { clearTimeout(timer); delete window[cb]; s.remove(); }
+      window[cb] = (data) => { cleanup(); resolve(data.results || []); };
+      s.onerror = () => { cleanup(); reject(new Error("network")); };
+      s.src = "https://itunes.apple.com/search?" + new URLSearchParams({
+        term, entity: "song", limit: "8", country: COUNTRY, callback: cb,
       });
-      const res = await r.json();
-      msg.textContent = res.message;
-      msg.className = "msg " + (res.ok ? "ok" : "err");
-      if (res.ok) $("q").value = "";
+      document.head.appendChild(s);
+    });
+  }
+
+  function typedOption(term) {
+    return `<button class="typed" data-typed="1">Can't find it? Add “${esc(term)}” as typed</button>`;
+  }
+
+  async function runSearch() {
+    const term = $("q").value.trim();
+    const box = $("results");
+    if (term.length < 2) { box.innerHTML = ""; return; }
+    const mySeq = searchSeq + 1;
+    box.innerHTML = `<div class="hint">Searching…</div>`;
+    try {
+      const results = await itunesSearch(term);
+      if (mySeq !== searchSeq) return; // a newer search has started
+      lastResults = results;
+      box.innerHTML = results.map((r, i) => `
+        <div class="row">
+          ${art((r.artworkUrl100 || "").replace("100x100bb", "200x200bb"))}
+          <div class="grow">
+            <div class="t">${esc(r.trackName)}${r.trackExplicitness === "explicit" ? '<span class="badge">E</span>' : ""}</div>
+            <div class="s">${esc(r.artistName)}</div>
+          </div>
+          <button data-i="${i}">+ Add</button>
+        </div>`).join("") + typedOption(term);
+      if (!results.length) box.innerHTML = `<div class="hint">No matches.</div>` + typedOption(term);
     } catch (e) {
-      msg.textContent = "Couldn't reach the jukebox.";
-      msg.className = "msg err";
+      lastResults = [];
+      box.innerHTML = `<div class="hint">Search isn't available right now.</div>` + typedOption(term);
     }
-    $("go").disabled = false;
-    refresh();
+  }
+
+  $("q").addEventListener("input", () => { clearTimeout(debounce); debounce = setTimeout(runSearch, 450); });
+  $("q").addEventListener("keydown", (e) => { if (e.key === "Enter") { clearTimeout(debounce); runSearch(); } });
+
+  $("results").addEventListener("click", async (e) => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    b.disabled = true;
+    let data;
+    if (b.dataset.typed) {
+      data = { name, q: $("q").value.trim() };
+    } else {
+      const r = lastResults[+b.dataset.i];
+      data = {
+        name, title: r.trackName, artist: r.artistName,
+        art: (r.artworkUrl100 || "").replace("100x100bb", "200x200bb"), tid: r.trackId,
+      };
+    }
+    const res = await post("/api/add", data);
+    if (res.ok) { $("q").value = ""; $("results").innerHTML = ""; }
+    else b.disabled = false;
   });
 
   refresh();

@@ -103,9 +103,20 @@ class JukeboxService : Service() {
         r.method == "GET" && (r.path == "/" || r.path == "/index.html") ->
             TinyHttpServer.Response(200, "text/html; charset=utf-8", pageHtml)
 
-        r.method == "GET" && r.path == "/api/state" -> json(200, stateJson())
+        r.method == "GET" && r.path == "/api/state" -> json(200, stateJson(clientId(r)))
 
         r.method == "POST" && r.path == "/api/add" -> addFromGuest(r)
+
+        r.method == "POST" && r.path == "/api/vote" -> {
+            val id = r.params["id"]?.toLongOrNull() ?: -1L
+            reply(queue.vote(id, clientId(r)))
+        }
+
+        r.method == "POST" && r.path == "/api/skipvote" -> {
+            val res = queue.voteSkip(clientId(r), activeGuests())
+            afterSkip(res)
+            reply(res)
+        }
 
         else -> TinyHttpServer.Response.text(404, "Not found")
     }
@@ -119,24 +130,87 @@ class JukeboxService : Service() {
             }
             lastAddByIp[r.remote] = now
         }
-        val res = queue.add(r.params["q"].orEmpty(), r.params["name"].orEmpty())
+        val p = r.params
+        // Picked from search results (title/artist/art/tid) or typed free-form (q).
+        val song = JukeboxQueue.Song(
+            title = p["title"]?.takeIf { it.isNotBlank() } ?: p["q"].orEmpty(),
+            artist = p["artist"]?.takeIf { it.isNotBlank() },
+            artwork = safeArtwork(p["art"]),
+            trackId = p["tid"]?.toLongOrNull(),
+        )
+        val res = queue.add(song, p["name"].orEmpty(), clientId(r))
         if (res.ok) {
             lastEvent = res.message
             main.post { updateNotification() }
         }
-        return json(if (res.ok) 200 else 400, result(res.ok, res.message))
+        return reply(res)
     }
 
-    fun stateJson(): JSONObject {
-        val snap = queue.snapshot(amazon.nowPlaying())
+    /** Called after any skip: if nothing was queued, skip inside Amazon Music too. */
+    fun afterSkip(res: JukeboxQueue.Result) {
+        if (res.needsAmazonSkip) amazon.skipInAmazon()
+        if (res.ok) {
+            lastEvent = res.message
+            main.post { updateNotification() }
+        }
+    }
+
+    fun stateJson(clientId: String): JSONObject {
+        val snap = queue.snapshot(clientId, amazon.nowPlaying(), activeGuests())
         return JSONObject()
             .put("nowPlaying", snap.nowPlaying ?: JSONObject.NULL)
+            .put("nowArtwork", snap.nowArtwork ?: JSONObject.NULL)
             .put("requestedBy", snap.requestedBy ?: JSONObject.NULL)
             .put("playing", amazon.isPlaying())
+            .put("skipVotes", snap.skipVotes)
+            .put("skipNeeded", snap.skipNeeded)
+            .put("iVotedSkip", snap.iVotedSkip)
+            .put("canVoteSkip", snap.canVoteSkip)
+            .put("guests", activeGuests())
             .put("upNext", JSONArray().apply {
-                snap.upNext.forEach { put(JSONObject().put("query", it.query).put("by", it.by)) }
+                snap.upNext.forEach {
+                    put(
+                        JSONObject()
+                            .put("id", it.id)
+                            .put("title", it.song.title)
+                            .put("artist", it.song.artist ?: JSONObject.NULL)
+                            .put("artwork", it.song.artwork ?: JSONObject.NULL)
+                            .put("by", it.by)
+                            .put("votes", it.votes)
+                            .put("myVote", it.myVote)
+                            .put("mine", it.mine),
+                    )
+                }
             })
     }
+
+    // ------------------------------------------------- guest identity
+    private val lastSeen = HashMap<String, Long>()
+
+    /** Random ID each guest's browser keeps; falls back to their IP address. */
+    private fun clientId(r: TinyHttpServer.Request): String {
+        val raw = r.params["cid"].orEmpty()
+        val id = if (CLIENT_ID.matches(raw)) raw else "ip:${r.remote}"
+        synchronized(lastSeen) { lastSeen[id] = System.currentTimeMillis() }
+        return id
+    }
+
+    /** Guests who've had the page open in the last few minutes (for vote-to-skip). */
+    private fun activeGuests(): Int = synchronized(lastSeen) {
+        val cutoff = System.currentTimeMillis() - ACTIVE_WINDOW_MS
+        lastSeen.values.removeAll { it < cutoff }
+        lastSeen.size.coerceAtLeast(1)
+    }
+
+    /** Only accept album art from Apple's image servers, over https. */
+    private fun safeArtwork(url: String?): String? {
+        if (url.isNullOrBlank() || url.length > 300) return null
+        val host = try { java.net.URI(url).takeIf { it.scheme == "https" }?.host } catch (e: Exception) { null }
+        return url.takeIf { host != null && host.endsWith(".mzstatic.com") }
+    }
+
+    private fun reply(res: JukeboxQueue.Result) =
+        json(if (res.ok) 200 else 400, result(res.ok, res.message))
 
     private fun result(ok: Boolean, msg: String) = JSONObject().put("ok", ok).put("message", msg)
 
@@ -191,6 +265,9 @@ class JukeboxService : Service() {
         private const val NOTIF_ID = 1
         private const val TICK_MS = 3_000L
         private const val GUEST_COOLDOWN_MS = 4_000L
+        private const val ACTIVE_WINDOW_MS = 5 * 60_000L
+        private val CLIENT_ID = Regex("[A-Za-z0-9-]{8,40}")
+        const val HOST_ID = "host-device"
 
         @Volatile var instance: JukeboxService? = null
             private set

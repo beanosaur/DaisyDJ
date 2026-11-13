@@ -15,12 +15,20 @@ Guests' phones (any browser)  ──Wi-Fi──►  Host Android phone  ──�
 - **The host phone must be Android.** iPhones don't let one app control another's music.
 - Everyone must be on the same Wi-Fi, **or** guests join the host phone's hotspot.
 
+## What guests can do
+- **Search with album art.** Type a few letters and pick the real song (from Apple's
+  free iTunes catalogue). There's also an "add as typed" option.
+- **Vote 👍** on queued songs. The most-voted song plays next; ties go to whoever asked first.
+- **Vote to skip.** The current song is skipped once half the guests agree (at least 2
+  once there's a crowd). Whoever requested a song can skip it straight away.
+- Asking for a song that's already queued counts as a vote for it.
+
 ## How it works
 Amazon Music has no public "add to queue" feature, so the app keeps its own queue.
-It starts each song by asking Amazon Music to "play from search" (the same request
-Google Assistant uses), and watches Amazon Music's now-playing info. When the
-requested song ends, it starts the next one. When the queue is empty, Amazon's own
-autoplay carries on.
+It starts each song by asking Amazon Music to "play from search" for "title + artist"
+(the same request Google Assistant uses), and watches Amazon Music's now-playing info.
+When the requested song ends, it starts the most-voted next one. When the queue is
+empty, Amazon's own autoplay carries on.
 
 ## 1. Get the app (APK)
 
@@ -50,9 +58,12 @@ Then use **Test it → Add song as host** to check a song plays.
 3. The host screen has **Pause/Play**, **Skip**, **Clear** and ✕ to remove a song.
 
 Rules built in: up to 3 waiting songs per person, plus a short cooldown between requests from the same phone.
+The host screen also shows how many guests are connected and any skip votes.
 
 ## Known limits (v0.1)
-- **Amazon picks the best match** for what's typed, so "song + artist" works best.
+- **Search uses Apple's catalogue, playback uses Amazon's.** Amazon plays its best match
+  for the picked title and artist; almost always the same song, occasionally a different version.
+- Guests' phones need internet for search (normal Wi-Fi or the host's hotspot both work).
   What's available depends on the host's plan (Prime vs Unlimited); on some plans
   Amazon may play a station or shuffle instead of the exact track.
 - **Pressing next on the phone or speaker** counts as "song finished", so the next request starts.

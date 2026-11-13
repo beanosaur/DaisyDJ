@@ -115,7 +115,7 @@ class MainActivity : Activity() {
             val s = service()
             if (s == null) toast("Start the jukebox first")
             else Thread {
-                val msg = s.queue.add(testBox.text.toString(), "Host").message
+                val msg = s.queue.add(JukeboxQueue.Song(testBox.text.toString()), "Host", JukeboxService.HOST_ID).message
                 runOnUiThread { toast(msg); testBox.setText("") }
             }.start()
         })
@@ -184,23 +184,29 @@ class MainActivity : Activity() {
             return
         }
         Thread {
-            val state = s.stateJson()
+            val state = s.stateJson(JukeboxService.HOST_ID)
             runOnUiThread {
                 val now = state.optString("nowPlaying").takeIf { !state.isNull("nowPlaying") }
                 val by = state.optString("requestedBy").takeIf { !state.isNull("requestedBy") }
+                val skip = state.getInt("skipVotes").let {
+                    if (it > 0) "\n⏭ $it/${state.getInt("skipNeeded")} votes to skip" else ""
+                }
                 nowText.text = when {
                     now == null -> "Nothing yet – waiting for requests"
                     by != null -> "$now\nrequested by $by"
                     else -> now
-                }
+                } + skip + "\n👥 ${state.getInt("guests")} guest(s) connected"
                 queueList.removeAllViews()
                 val upNext = state.getJSONArray("upNext")
                 if (upNext.length() == 0) queueList.addView(label("Queue is empty", 15f))
                 for (i in 0 until upNext.length()) {
                     val item = upNext.getJSONObject(i)
                     val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
-                    row.addView(label("${i + 1}. ${item.getString("query")} · ${item.getString("by")}", 15f), LinearLayout.LayoutParams(0, -2, 1f))
-                    row.addView(button("✕") { toast(s.queue.remove(i).message); refreshLive() })
+                    val id = item.getLong("id")
+                    val artist = if (item.isNull("artist")) "" else " – " + item.getString("artist")
+                    val votes = item.getInt("votes").let { if (it > 0) "  👍$it" else "" }
+                    row.addView(label("${i + 1}. ${item.getString("title")}$artist · ${item.getString("by")}$votes", 15f), LinearLayout.LayoutParams(0, -2, 1f))
+                    row.addView(button("✕") { toast(s.queue.remove(id).message); refreshLive() })
                     queueList.addView(row)
                 }
             }
@@ -226,8 +232,8 @@ class MainActivity : Activity() {
         val s = service() ?: return
         Thread {
             val r = s.queue.skip()
-            if (!r.ok) s.amazon.skipInAmazon()
-            runOnUiThread { toast(if (r.ok) r.message else "Skipped (nothing queued)") }
+            s.afterSkip(r)
+            runOnUiThread { toast(r.message) }
         }.start()
     }
 
